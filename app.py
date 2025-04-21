@@ -1,17 +1,19 @@
-from flask import Flask, url_for
+from flask import Flask, url_for, render_template
 import sqlite3
 
 app = Flask(__name__)
 
 db = None
-def abrirConexion():
-    global db
-    db = sqlite3.connect("instance/datos.sqlite")
 
 def dict_factory(cursor, row):
     """Arma un diccionario con los valores de la fila."""
     fields = [column[0] for column in cursor.description]
     return {key: value for key, value in zip(fields, row)}
+
+def abrirConexion():
+    global db
+    db = sqlite3.connect("instance/datos.sqlite")
+    db.row_factory = dict_factory
 
 def cerrarConexion():
     global db
@@ -82,8 +84,22 @@ def hello_world():
 def hola_mundo():
     return "<p>hola mundo</p>"
 
-@app.rout("/tirar-dado/<int:caras>")
-def caras():
+@app.route("/tirar-dado/<int:caras>")
+def dado(caras):
     from random import randint
     n = randint(1,caras)
     return f"<p>Tire un dado de {caras} caras, salio {n}<p>"
+
+@app.route("/mostrar-datos-plantilla/<int:id>")
+def datos_plantilla(id):
+    abrirConexion()
+    cursor = db.cursor()
+    cursor.execute("SELECT id, usuario, email FROM usuarios WHERE id = ?; ", (id,))
+    res = cursor.fetchone()
+    cerrarConexion()
+    usuario = None
+    email = None
+    if res != None:
+        usuario=res['usuario']
+        email=res['email']
+    return render_template("datos.html", id=id, usuario=usuario, email=email)
